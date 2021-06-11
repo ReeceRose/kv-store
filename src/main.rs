@@ -18,6 +18,7 @@ struct Database {
 
 impl Database {
     fn new() -> Result<Database, std::io::Error> {
+        let mut map = HashMap::new();
         // let contents = match std::fs::read_to_string("kv.db") {
         //     Ok(c) => c,
         //     Err(error) => {
@@ -27,12 +28,14 @@ impl Database {
 
         // read the file
         let contents = std::fs::read_to_string("kv.db")?; // The ? will pretty much produce the above commented out code
-                                                          // parse the string
 
-        // populate database
+        for line in contents.lines() {
+            // parse the string
+            let (key, value) = line.split_once('\t').expect("Corrup database");
+            // populate database
+            map.insert(key.to_owned(), value.to_owned());
+        }
 
-        Ok(Database {
-            map: HashMap::new(),
-        })
+        Ok(Database { map: map })
     }
 }
