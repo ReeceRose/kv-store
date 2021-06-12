@@ -10,11 +10,12 @@ fn main() {
     let mut database = Database::new().expect("Failed to create database");
     database.insert(key.to_uppercase(), value.clone());
     database.insert(key, value);
-    database.flush().unwrap();
+    database.flush().unwrap(); // Call to flush is not required. Will be picked up by drop()
 }
 
 struct Database {
     map: HashMap<String, String>,
+    flushed: bool,
 }
 
 impl Database {
@@ -37,26 +38,37 @@ impl Database {
             map.insert(key.to_owned(), value.to_owned());
         }
 
-        Ok(Database { map })
+        Ok(Database {
+            map,
+            flushed: false,
+        })
     }
 
     fn insert(&mut self, key: String, value: String) {
         self.map.insert(key, value);
     }
 
-    // Flush will take ownership of database. This is by design.
-    // Once flush is called, by design you can no longer use database
-    // anymore and this is enfored by taking ownership here which
-    // will clear database from memory after this method exits.
-    // This is further enforced by the rust compiler.
-    fn flush(self) -> Result<(), Error> {
-        let mut contents = String::new();
-        for (key, value) in &self.map {
-            contents.push_str(key);
-            contents.push('\t');
-            contents.push_str(value);
-            contents.push('\n');
-        }
-        std::fs::write("kv.db", contents)
+    fn flush(mut self) -> Result<(), Error> {
+        self.flushed = true;
+        do_flush(&self)
     }
+}
+
+impl Drop for Database {
+    fn drop(&mut self) {
+        if !self.flushed {
+            let _ = do_flush(self);
+        }
+    }
+}
+
+fn do_flush(database: &Database) -> Result<(), Error> {
+    let mut contents = String::new();
+    for (key, value) in &database.map {
+        contents.push_str(key);
+        contents.push('\t');
+        contents.push_str(value);
+        contents.push('\n');
+    }
+    std::fs::write("kv.db", contents)
 }
