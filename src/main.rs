@@ -9,7 +9,9 @@ fn main() {
     let contents = format!("{}\t{}\n", key, value);
     std::fs::write("kv.db", contents).unwrap();
 
-    //Database::new();
+    let mut database = Database::new().expect("Failed to create database");
+    database.insert(key.to_uppercase(), value.clone());
+    database.insert(key, value);
 }
 
 struct Database {
@@ -37,5 +39,9 @@ impl Database {
         }
 
         Ok(Database { map: map })
+    }
+
+    fn insert(&mut self, key: String, value: String) {
+        self.map.insert(key, value);
     }
 }
