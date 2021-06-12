@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::io::Error;
 
 fn main() {
     let mut arguments = std::env::args().skip(1);
@@ -6,12 +7,10 @@ fn main() {
     let value = arguments.next().unwrap();
     println!("The key is '{}' and the value is '{}'", key, value);
 
-    let contents = format!("{}\t{}\n", key, value);
-    std::fs::write("kv.db", contents).unwrap();
-
     let mut database = Database::new().expect("Failed to create database");
     database.insert(key.to_uppercase(), value.clone());
     database.insert(key, value);
+    database.flush().unwrap();
 }
 
 struct Database {
@@ -19,7 +18,7 @@ struct Database {
 }
 
 impl Database {
-    fn new() -> Result<Database, std::io::Error> {
+    fn new() -> Result<Database, Error> {
         let mut map = HashMap::new();
         // let contents = match std::fs::read_to_string("kv.db") {
         //     Ok(c) => c,
@@ -43,5 +42,19 @@ impl Database {
 
     fn insert(&mut self, key: String, value: String) {
         self.map.insert(key, value);
+    }
+
+    // Flush will take ownership of database. This is by design.
+    // Once flush is called, by design you can no longer use database
+    // anymore and this is enfored by taking ownership here which
+    // will clear database from memory after this method exits.
+    // This is further enforced by the rust compiler.
+    fn flush(self) -> Result<(), Error> {
+        let mut contents = String::new();
+        for pairs in &self.map {
+            let kvpair = format!("{}\t{}\n", pairs.0, pairs.1);
+            contents.push_str(&kvpair);
+        }
+        std::fs::write("kv.db", contents)
     }
 }
