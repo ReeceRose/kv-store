@@ -37,7 +37,7 @@ impl Database {
             map.insert(key.to_owned(), value.to_owned());
         }
 
-        Ok(Database { map: map })
+        Ok(Database { map })
     }
 
     fn insert(&mut self, key: String, value: String) {
@@ -51,9 +51,11 @@ impl Database {
     // This is further enforced by the rust compiler.
     fn flush(self) -> Result<(), Error> {
         let mut contents = String::new();
-        for pairs in &self.map {
-            let kvpair = format!("{}\t{}\n", pairs.0, pairs.1);
-            contents.push_str(&kvpair);
+        for (key, value) in &self.map {
+            contents.push_str(key);
+            contents.push('\t');
+            contents.push_str(value);
+            contents.push('\n');
         }
         std::fs::write("kv.db", contents)
     }
